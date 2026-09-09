@@ -120,7 +120,7 @@ func writeJSON(w http.ResponseWriter, v any) {
 }
 
 func main() {
-	addr := flag.String("addr", "127.0.0.1:3000", "listen address")
+	addr := flag.String("addr", "127.0.0.1:16000", "listen address") // 16000 = CS2 max money
 	flag.Parse()
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

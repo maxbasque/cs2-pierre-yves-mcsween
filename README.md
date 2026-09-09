@@ -17,7 +17,8 @@ export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"   # this box only
 go run .
 ```
 
-Open <http://127.0.0.1:3000>. The manual calculator works immediately.
+Open <http://127.0.0.1:16000> (port 16000 = CS2 max money). The manual calculator
+works immediately. Override with `-addr 127.0.0.1:PORT`.
 
 ## Live game data (optional)
 
