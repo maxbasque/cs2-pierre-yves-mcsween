@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CS2 Pierre-Yves McSween</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; font: 15px/1.5 system-ui, sans-serif; background: #14181d; color: #e6e6e6; }
+  main { max-width: 640px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 1.3rem; margin: 0 0 2px; }
+  .sub { color: #8b98a5; margin: 0 0 24px; font-style: italic; }
+  fieldset { border: 1px solid #2a323c; border-radius: 8px; margin: 0 0 20px; padding: 16px; }
+  legend { padding: 0 6px; color: #8b98a5; text-transform: uppercase; font-size: .75rem; letter-spacing: .06em; }
+  label { display: block; margin: 10px 0 4px; color: #b7c2cd; font-size: .85rem; }
+  input, select { width: 100%; box-sizing: border-box; padding: 8px; background: #1d232b; border: 1px solid #2a323c;
+    border-radius: 6px; color: #e6e6e6; font: inherit; }
+  .row { display: flex; gap: 12px; }
+  .row > div { flex: 1; }
+  .card { border-radius: 8px; padding: 16px; background: #1d232b; border: 1px solid #2a323c; }
+  .cat { font-size: 1.4rem; font-weight: 700; margin: 0 0 4px; }
+  .reason { color: #b7c2cd; margin: 0; }
+  .meta { margin-top: 12px; color: #8b98a5; font-size: .85rem; }
+  .full-buy { color: #4ade80 } .half-buy { color: #a3e635 }
+  .eco---save { color: #fbbf24 } .force-buy { color: #fb923c } .full-eco { color: #f87171 }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #f87171; margin-right: 6px; vertical-align: middle }
+  .dot.on { background: #4ade80 }
+</style>
+</head>
+<body>
+<main>
+  <h1>CS2 Pierre-Yves McSween</h1>
+  <p class="sub">En as-tu vraiment besoin?</p>
+
+  <fieldset>
+    <legend><span id="livedot" class="dot"></span>Live (Game State Integration)</legend>
+    <p id="livestatus" class="meta">Waiting for CS2… drop the .cfg in your csgo/cfg folder and launch the game.</p>
+    <div id="livecard" class="card" hidden>
+      <p id="live-cat" class="cat"></p>
+      <p id="live-reason" class="reason"></p>
+      <p id="live-meta" class="meta"></p>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Manual calculator</legend>
+    <div class="row">
+      <div>
+        <label for="money">Money in hand ($)</label>
+        <input type="number" id="money" value="800" min="0" max="16000" step="50">
+      </div>
+      <div>
+        <label for="team">Side</label>
+        <select id="team"><option>T</option><option>CT</option></select>
+      </div>
+      <div>
+        <label for="losses">Loss streak</label>
+        <input type="number" id="losses" value="1" min="0" max="10">
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <p id="calc-cat" class="cat"></p>
+      <p id="calc-reason" class="reason"></p>
+      <p id="calc-meta" class="meta"></p>
+    </div>
+  </fieldset>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const cls = c => c.toLowerCase().replace(/[^a-z]+/g, "-");
+
+function render(prefix, d) {
+  const a = d.advice;
+  $(prefix + "-cat").textContent = a.category;
+  $(prefix + "-cat").className = "cat " + cls(a.category);
+  $(prefix + "-reason").textContent = a.reason;
+  $(prefix + "-meta").textContent =
+    `$${d.money} in hand · ${d.team} · ${d.losses} losses · loss bonus $${d.loss_bonus ?? "-"} · save → ~$${a.save_next_round} next round`;
+}
+
+async function calc() {
+  const p = new URLSearchParams({ money: $("money").value, team: $("team").value, losses: $("losses").value });
+  const d = await (await fetch("/api/calc?" + p)).json();
+  render("calc", d);
+}
+["money", "team", "losses"].forEach(id => $(id).addEventListener("input", calc));
+calc();
+
+async function poll() {
+  try {
+    const s = await (await fetch("/api/state")).json();
+    if (s.have && s.team) {
+      $("livedot").classList.add("on");
+      $("livestatus").hidden = true;
+      $("livecard").hidden = false;
+      render2(s);
+    } else {
+      $("livedot").classList.remove("on");
+      $("livestatus").hidden = false;
+      $("livecard").hidden = true;
+    }
+  } catch (_) {}
+}
+function render2(s) {
+  $("live-cat").textContent = s.advice.category;
+  $("live-cat").className = "cat " + cls(s.advice.category);
+  $("live-reason").textContent = s.advice.reason;
+  $("live-meta").textContent =
+    `$${s.money} · ${s.team} · round ${s.round} (${s.phase}) · ${s.losses} losses · save → ~$${s.advice.save_next_round}`;
+}
+setInterval(poll, 1000);
+poll();
+</script>
+</body>
+</html>
