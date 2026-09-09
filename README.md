@@ -19,12 +19,8 @@ macOS** the same way. You need [Go](https://go.dev/dl/) 1.21+ installed.
 go run .
 ```
 
-On this Bazzite box, Go lives in Homebrew and isn't on the default PATH, so prefix
-that one machine's commands with:
-
-```sh
-export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
-```
+If your shell reports `go: command not found`, add Go's install location to your
+`PATH` first (for a Homebrew install that's `export PATH="$(brew --prefix)/bin:$PATH"`).
 
 Open <http://127.0.0.1:16000> (port 16000 = CS2 max money). The manual calculator
 works immediately. Override with `-addr 127.0.0.1:PORT`.
