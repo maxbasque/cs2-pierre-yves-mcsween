@@ -1,64 +1,80 @@
 # cs2-pierre-yves-mcsween
 
-A tiny Counter-Strike 2 economy adviser. *En as-tu vraiment besoin?*
+A tiny Counter-Strike 2 buy adviser. *En as-tu vraiment besoin?*
 
-Enter your money / side / loss streak and it tells you: **Full buy**, **Half buy**,
-**Eco / save**, **Force buy**, or **Full eco** — with the reasoning and your
-projected money next round if you save.
+It reads your money live from the match — Valve's Game State Integration, which is
+read-only and carries **no VAC risk** — and calls the round: **Full buy · Half buy ·
+Eco / save · Force buy · Full eco**. You get a loadout list, a **Rifler / AWPer** toggle,
+and how much money you're guaranteed next round whether you buy or save.
 
-Optionally it reads live data straight from the game via **Game State Integration
-(GSI)**, an official Valve feature. GSI is read-only: the game POSTs JSON to this
-local server. No injection, no memory reading, **no VAC risk**.
+## 1 — Get it running
 
-Pure Go standard library, no OS-specific code — runs on **Linux, Windows, and
-macOS** the same way. You need [Go](https://go.dev/dl/) 1.21+ installed.
+### Option A: download it (no Go needed)
 
-## Run
+Grab your file from the [Releases page](https://github.com/maxbasque/cs2-pierre-yves-mcsween/releases):
+
+| You're on | File |
+|-----------|------|
+| Windows | `pym-windows-amd64.exe` |
+| Mac, Apple Silicon (M1/M2/M3…) | `pym-darwin-arm64` |
+| Mac, Intel | `pym-darwin-amd64` |
+| Linux | `pym-linux-amd64` |
+
+Run it:
+
+- **Windows** — double-click. SmartScreen will warn (unsigned) → *More info → Run anyway*.
+- **Mac** — `xattr -d com.apple.quarantine ~/Downloads/pym-darwin-arm64` then
+  `chmod +x ~/Downloads/pym-darwin-arm64 && ~/Downloads/pym-darwin-arm64`.
+- **Linux** — `chmod +x pym-linux-amd64 && ./pym-linux-amd64`.
+
+### Option B: run from source
+
+Install [Go](https://go.dev/dl/), then from this folder:
 
 ```sh
 go run .
 ```
 
-If your shell reports `go: command not found`, add Go's install location to your
-`PATH` first (for a Homebrew install that's `export PATH="$(brew --prefix)/bin:$PATH"`).
+---
 
-Open <http://127.0.0.1:16000> (port 16000 = CS2 max money). The manual calculator
-works immediately. Override with `-addr 127.0.0.1:PORT`.
+Either way you'll see `listening on http://127.0.0.1:16000`. Open that in a browser.
+It sits in a "waiting" state until the game feeds it — that's step 2.
 
-To build a standalone binary instead: `go build -o pym .` (or `go build -o pym.exe .`
-on Windows), then run `./pym`.
+Port 16000 taken? Add `-addr 127.0.0.1:12345`.
 
-## Live game data (optional)
+## 2 — Connect CS2
 
-Copy `gamestate_integration_pym.cfg` into your CS2 `cfg` folder, then launch CS2.
-The folder is under your Steam library:
+Copy **`gamestate_integration_pym.cfg`** (it's in the repo, and attached to each release)
+into your CS2 config folder, then start CS2:
 
-| OS | Path |
-|----|------|
-| Windows | `C:\Program Files (x86)\Steam\steamapps\common\Counter-Strike Global Offensive\game\csgo\cfg\` |
+| OS | Folder |
+|----|--------|
+| Windows | `…\Steam\steamapps\common\Counter-Strike Global Offensive\game\csgo\cfg\` |
+| Mac | `~/Library/Application Support/Steam/steamapps/common/Counter-Strike Global Offensive/game/csgo/cfg/` |
 | Linux | `~/.steam/steam/steamapps/common/Counter-Strike Global Offensive/game/csgo/cfg/` |
-| macOS | `~/Library/Application Support/Steam/steamapps/common/Counter-Strike Global Offensive/game/csgo/cfg/` |
 
-Easiest way to find it on any OS: in Steam, right-click **Counter-Strike 2 →
-Manage → Browse local files**, then open `game\csgo\cfg`.
+Can't find it? In Steam: right-click **Counter-Strike 2 → Manage → Browse local files**,
+then open `game/csgo/cfg`.
 
-The "Live" panel lights up once you're in a match. Works in matchmaking, community
-servers, and demo playback. In a live match GSI only reports **your own** money
-(the full economy table needs spectator/observer).
+That's it. The panel updates every freeze time. It only sees **your own** money (the full
+team economy needs spectator mode). Works in matchmaking, community servers, and demos.
+No firewall changes — it's localhost only.
 
-The `.cfg` points GSI at `http://127.0.0.1:16000/gsi` — if you run the server on a
-different port or host, edit the `uri` line to match. Keep it on `127.0.0.1`
-(localhost); no firewall changes are needed for loopback on any OS.
+If you changed the port, update the `uri` line in the `.cfg` to match.
 
-## Known simplifications (v0)
+## Notes
 
-- Kill rewards assume $300 (rifle/pistol/SMG). AWP is $100, knife $1500, shotgun $900.
-- Buy thresholds are fixed "kitted rifle" targets (~$4700 T / ~$5000 CT), not
-  situational (enemy buy, man advantage, bomb down, time on clock).
-- No teammate economy — advice is for you, not the team.
+- The numbers are a rough sanity check, not a coach: fixed buy targets (rifler ~$4,700,
+  AWPer ~$6,250), no read on the enemy buy, man advantage, or clock.
+- "Guaranteed next round" is the worst case — you lose the round with no kills, no plant.
+- Economy constants (loss bonus $1,400 → $3,400, round wins, max $16,000) are all in
+  `economy.go`.
 
-## Economy rules encoded
+## Cutting a release (me only)
 
-See `economy.go`. Loss bonus $1400 → $3400 (+$500 per consecutive loss). Win
-rewards: elimination $3250, T detonation $3500, CT defuse $3250. Plant bonus $800
-(kept on a lost round). Max money $16000.
+```sh
+git tag v2 && git push --tags
+```
+
+GitHub Actions (`.github/workflows/release.yml`) cross-compiles all four binaries and
+publishes them to the Releases page. Nothing to build by hand.

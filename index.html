@@ -7,24 +7,99 @@
 <style>
   :root { color-scheme: dark; }
   body { margin: 0; font: 15px/1.5 system-ui, sans-serif; background: #14181d; color: #e6e6e6; }
-  main { max-width: 640px; margin: 0 auto; padding: 24px 16px 64px; }
+  main { max-width: 880px; margin: 0 auto; padding: 24px 16px 64px; }
   h1 { font-size: 1.3rem; margin: 0 0 2px; }
   .sub { color: #8b98a5; margin: 0 0 24px; font-style: italic; }
   fieldset { border: 1px solid #2a323c; border-radius: 8px; margin: 0 0 20px; padding: 16px; }
   legend { padding: 0 6px; color: #8b98a5; text-transform: uppercase; font-size: .75rem; letter-spacing: .06em; }
-  label { display: block; margin: 10px 0 4px; color: #b7c2cd; font-size: .85rem; }
-  input, select { width: 100%; box-sizing: border-box; padding: 8px; background: #1d232b; border: 1px solid #2a323c;
-    border-radius: 6px; color: #e6e6e6; font: inherit; }
-  .row { display: flex; gap: 12px; }
-  .row > div { flex: 1; }
-  .card { border-radius: 8px; padding: 16px; background: #1d232b; border: 1px solid #2a323c; }
-  .cat { font-size: 1.4rem; font-weight: 700; margin: 0 0 4px; }
-  .reason { color: #b7c2cd; margin: 0; }
   .meta { margin-top: 12px; color: #8b98a5; font-size: .85rem; }
-  .full-buy { color: #4ade80 } .half-buy { color: #a3e635 }
-  .eco---save { color: #fbbf24 } .force-buy { color: #fb923c } .full-eco { color: #f87171 }
+
+  /* One CSS var per category drives the border, tint, verdict fill and accents.
+     Hues are picked far apart so the call reads at a glance — green / blue / amber
+     / orange / red, not five shades of the same. */
+  .live-card  { --accent: #8b98a5; --ink: #10141a; }
+  .full-buy   { --accent: #22c55e; --ink: #05230f; }
+  .half-buy   { --accent: #3b82f6; --ink: #f2f7ff; }
+  .eco-save   { --accent: #f5b301; --ink: #241900; }
+  .force-buy  { --accent: #f97316; --ink: #f9f2ec; }
+  .full-eco   { --accent: #ef4444; --ink: #fff1f1; }
+
+  /* Live box — big, glanceable. Two things matter: the buy call and the save projection. */
+  #live-fs { padding: 20px 20px 16px; }
+  .live-card { display: grid; grid-template-columns: 1.5fr 1fr; gap: 24px;
+    border-radius: 10px; padding: 24px 26px;
+    background: color-mix(in srgb, var(--accent) 12%, #191e25);
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, #2a323c);
+    border-left: 12px solid var(--accent); }
+  .live-call { min-width: 0; }
+  .live-verdict { display: inline-block; margin: 0 0 12px; padding: 5px 16px 7px;
+    background: var(--accent); color: var(--ink); border-radius: 8px;
+    font-size: clamp(2.1rem, 5.5vw, 3rem); line-height: 1.05;
+    font-weight: 800; letter-spacing: -.015em; text-transform: uppercase; }
+  .live-reason { color: #d5dde4; margin: 0; font-size: 1.05rem; line-height: 1.45; }
+  .loadout { list-style: none; margin: 14px 0 0; padding: 0; }
+  .loadout li { position: relative; padding: 8px 0 8px 24px; font-size: 1.05rem; color: #e6e6e6;
+    border-top: 1px solid #262e38; }
+  .loadout li:first-child { border-top: 0; }
+  .loadout li::before { content: "▸"; position: absolute; left: 3px; color: var(--accent); }
+  .live-side { align-self: start; display: flex; flex-direction: column; gap: 12px; }
+  .live-side-cap { margin: 0 -2px 0; color: #8b98a5; font-size: .78rem; line-height: 1.35; }
+  .live-box { border-radius: 9px; padding: 14px 16px;
+    background: #171c22; border: 1px solid color-mix(in srgb, var(--accent) 40%, #2a323c); }
+  .live-box .k { color: #8b98a5; font-size: .72rem; text-transform: uppercase; letter-spacing: .07em; margin: 0 0 6px; }
+  .live-box .v { font-size: clamp(1.7rem, 4.5vw, 2.2rem); font-weight: 800; line-height: 1.1; margin: 0;
+    color: color-mix(in srgb, var(--accent) 32%, #ffffff); font-variant-numeric: tabular-nums; }
+  .live-box .sub { color: #8b98a5; font-size: .78rem; margin: 5px 0 0; }
+  .live-box--buy { background: color-mix(in srgb, var(--accent) 14%, #171c22); }
+  .live-context { grid-column: 1 / -1; margin: 0; padding-top: 14px; border-top: 1px solid #2a323c;
+    color: #8b98a5; font-size: .9rem; font-variant-numeric: tabular-nums; }
+  .mannequin { grid-column: 1 / -1; margin: 4px 0 0; border-radius: 10px; overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, #2a323c); background: #10141a; }
+  .mannequin > summary { cursor: pointer; list-style: none; user-select: none;
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 14px; background: #1d2530; color: #d5dde4;
+    font-size: .82rem; font-weight: 600; letter-spacing: .03em; }
+  .mannequin > summary:hover { background: #263241; color: #fff; }
+  .mannequin[open] > summary { border-bottom: 1px solid #2a323c; }
+  .mannequin > summary::-webkit-details-marker { display: none; }
+  .mannequin > summary::before { content: "▾"; display: inline-block; color: var(--accent);
+    transition: transform .15s ease; }
+  .mannequin:not([open]) > summary::before { transform: rotate(-90deg); }
+  .mannequin > summary::after { margin-left: auto; content: "Hide"; color: var(--accent);
+    font-weight: 700; font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; }
+  .mannequin:not([open]) > summary::after { content: "Show"; }
+  .mannequin img { display: block; width: 100%; height: auto; }
+  @media (max-width: 680px) { .live-card { grid-template-columns: 1fr; gap: 18px; } }
+
+  .roles { display: inline-flex; margin: 0 0 16px; border: 1px solid #2a323c; border-radius: 7px; overflow: hidden; }
+  .roles button { padding: 6px 16px; font: inherit; font-size: .8rem; font-weight: 600; letter-spacing: .02em;
+    background: #1d232b; color: #8b98a5; border: 0; border-left: 1px solid #2a323c; cursor: pointer; }
+  .roles button:first-child { border-left: 0; }
+  .roles button.on { background: #2f3945; color: #e6e6e6; }
   .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #f87171; margin-right: 6px; vertical-align: middle }
   .dot.on { background: #4ade80 }
+  .debug-box { margin-top: 14px; border: 1px solid #2a323c; border-radius: 8px; overflow: hidden; }
+  .debug-box > summary { cursor: pointer; list-style: none; user-select: none;
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px; background: #1d2530; color: #b7c2cd;
+    font-size: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+  .debug-box > summary:hover { background: #263241; color: #fff; }
+  .debug-box > summary::-webkit-details-marker { display: none; }
+  .debug-box > summary::before { content: "▾"; display: inline-block; color: #6b7684;
+    transition: transform .15s ease; }
+  .debug-box:not([open]) > summary::before { transform: rotate(-90deg); }
+  .debug-box > summary::after { margin-left: auto; content: "Hide"; color: #6b7684;
+    font-weight: 700; font-size: .68rem; }
+  .debug-box:not([open]) > summary::after { content: "Show"; }
+  .debug-box[open] > summary { border-bottom: 1px solid #2a323c; }
+  .debug { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 12px 4px; }
+  .debug button { padding: 3px 8px; font: inherit; font-size: .75rem; background: #1d232b; color: #b7c2cd;
+    border: 1px solid #2a323c; border-radius: 5px; cursor: pointer; }
+  .debug button:hover { border-color: #3a4652; color: #e6e6e6; }
+  .debug button.on { border-color: #4b5563; background: #2f3945; color: #fff; }
+  .debug button[data-mode="live"] { margin-right: 10px; }
+  .debug button[data-mode="live"].on { border-color: #4ade80; color: #4ade80; }
+  .debug-hint { margin: 0; padding: 0 12px 10px; color: #6b7684; font-size: .72rem; }
 </style>
 </head>
 <body>
@@ -32,85 +107,161 @@
   <h1>CS2 Pierre-Yves McSween</h1>
   <p class="sub">En as-tu vraiment besoin?</p>
 
-  <fieldset>
+  <fieldset id="live-fs">
     <legend><span id="livedot" class="dot"></span>Live (Game State Integration)</legend>
     <p id="livestatus" class="meta">Waiting for CS2… drop the .cfg in your csgo/cfg folder and launch the game.</p>
-    <div id="livecard" class="card" hidden>
-      <p id="live-cat" class="cat"></p>
-      <p id="live-reason" class="reason"></p>
-      <p id="live-meta" class="meta"></p>
+    <div class="roles" id="roles">
+      <button type="button" data-role="rifle">Rifler</button>
+      <button type="button" data-role="awp">AWPer</button>
     </div>
-  </fieldset>
-
-  <fieldset>
-    <legend>Manual calculator</legend>
-    <div class="row">
-      <div>
-        <label for="money">Money in hand ($)</label>
-        <input type="number" id="money" value="800" min="0" max="16000" step="50">
+    <div id="livecard" class="live-card" hidden>
+      <div class="live-call">
+        <p id="live-cat" class="live-verdict"></p>
+        <p id="live-reason" class="live-reason"></p>
+        <ul id="live-loadout" class="loadout"></ul>
       </div>
-      <div>
-        <label for="team">Side</label>
-        <select id="team"><option>T</option><option>CT</option></select>
+      <div class="live-side">
+        <p class="live-side-cap">Money you'll have next round — the minimum, if you lose with no kills:</p>
+        <div class="live-box">
+          <p class="k">if you save this round</p>
+          <p id="live-save-v" class="v"></p>
+          <p class="sub">spend nothing now</p>
+        </div>
+        <div class="live-box live-box--buy">
+          <p class="k">if you buy this</p>
+          <p id="live-buy-v" class="v"></p>
+          <p id="live-buy-sub" class="sub"></p>
+        </div>
       </div>
-      <div>
-        <label for="losses">Loss streak</label>
-        <input type="number" id="losses" value="1" min="0" max="10">
-      </div>
+      <p id="live-context" class="live-context"></p>
+      <details id="mannequin" class="mannequin" open>
+        <summary>Loadout</summary>
+        <img id="live-img" alt="">
+      </details>
     </div>
-    <div class="card" style="margin-top:16px">
-      <p id="calc-cat" class="cat"></p>
-      <p id="calc-reason" class="reason"></p>
-      <p id="calc-meta" class="meta"></p>
-    </div>
+    <details class="debug-box">
+      <summary>Debug — preview a verdict</summary>
+      <div class="debug" id="debug"></div>
+      <p class="debug-hint">Pins a preview until you pick another (or “Live”). Doesn’t touch real game state.</p>
+    </details>
   </fieldset>
 </main>
 
 <script>
 const $ = id => document.getElementById(id);
 const cls = c => c.toLowerCase().replace(/[^a-z]+/g, "-");
+const fmt = n => Number(n).toLocaleString("en-US");
 
-function render(prefix, d) {
-  const a = d.advice;
-  $(prefix + "-cat").textContent = a.category;
-  $(prefix + "-cat").className = "cat " + cls(a.category);
-  $(prefix + "-reason").textContent = a.reason;
-  $(prefix + "-meta").textContent =
-    `$${d.money} in hand · ${d.team} · ${d.losses} losses · loss bonus $${d.loss_bonus ?? "-"} · save → ~$${a.save_next_round} next round`;
+// Role sticks across rounds / reloads.
+let role = "rifle";
+try { role = localStorage.getItem("role") || "rifle"; } catch (_) {}
+function setRole(r) {
+  role = r;
+  try { localStorage.setItem("role", r); } catch (_) {}
+  for (const b of $("roles").children) b.classList.toggle("on", b.dataset.role === r);
+  refresh();
 }
+for (const b of $("roles").children) b.addEventListener("click", () => setRole(b.dataset.role));
 
-async function calc() {
-  const p = new URLSearchParams({ money: $("money").value, team: $("team").value, losses: $("losses").value });
-  const d = await (await fetch("/api/calc?" + p)).json();
-  render("calc", d);
+// mode is "live" (show the real game) or a category label (pin a debug preview).
+let mode = "live";
+function setMode(m) {
+  mode = m;
+  for (const b of $("debug").children) b.classList.toggle("on", b.dataset.mode === m);
+  refresh();
 }
-["money", "team", "losses"].forEach(id => $(id).addEventListener("input", calc));
-calc();
+function refresh() { mode === "live" ? poll() : preview(mode); }
+
+function applyState(s, live) {
+  $("livedot").classList.toggle("on", live && s.have);
+  $("livestatus").hidden = true;
+  $("livecard").hidden = false;
+  renderLive(s);
+}
+function showWaiting() {
+  $("livedot").classList.remove("on");
+  $("livestatus").hidden = false;
+  $("livecard").hidden = true;
+}
 
 async function poll() {
+  if (mode !== "live") return;   // a preview is pinned
   try {
-    const s = await (await fetch("/api/state")).json();
-    if (s.have && s.team) {
-      $("livedot").classList.add("on");
-      $("livestatus").hidden = true;
-      $("livecard").hidden = false;
-      render2(s);
-    } else {
-      $("livedot").classList.remove("on");
-      $("livestatus").hidden = false;
-      $("livecard").hidden = true;
-    }
+    const s = await (await fetch("/api/state?role=" + encodeURIComponent(role))).json();
+    if (s.have && s.team) applyState(s, true);
+    else showWaiting();
   } catch (_) {}
 }
-function render2(s) {
-  $("live-cat").textContent = s.advice.category;
-  $("live-cat").className = "cat " + cls(s.advice.category);
-  $("live-reason").textContent = s.advice.reason;
-  $("live-meta").textContent =
-    `$${s.money} · ${s.team} · round ${s.round} (${s.phase}) · ${s.losses} losses · save → ~$${s.advice.save_next_round}`;
+async function preview(label) {
+  const f = SCENARIOS[role === "awp" ? "awp" : "rifle"][label];
+  const q = new URLSearchParams({ money: f.money, losses: f.losses, team: "T", round: 5, role });
+  try { applyState(await (await fetch("/api/preview?" + q)).json(), false); } catch (_) {}
 }
+// Buy category -> mannequin image basename. "Eco / save" and "Full eco" share one.
+const BUY_IMG = {
+  "full-buy": "full-buy",
+  "half-buy": "half-buy",
+  "eco-save": "eco",
+  "force-buy": "force-buy",
+  "full-eco": "eco",
+};
+function setImg(category) {
+  const slug = BUY_IMG[cls(category)] || "eco";
+  const base = `/assets/${slug}.png`;
+  const want = role === "awp" ? `/assets/${slug}-awp.png` : base;
+  const img = $("live-img");
+  if (img.dataset.want === want) return;
+  img.dataset.want = want;
+  img.onerror = () => { img.onerror = null; img.src = base; }; // no -awp variant -> base
+  img.src = want;
+}
+
+function renderLive(s) {
+  const a = s.advice;
+  $("live-cat").textContent = a.category;
+  $("livecard").className = "live-card " + cls(a.category);
+  $("live-reason").textContent = a.reason;
+  $("live-loadout").innerHTML = (a.loadout || []).map(x => `<li>${x}</li>`).join("");
+  setImg(a.category);
+  $("live-save-v").textContent = `~$${fmt(a.save_next_round)}`;
+  $("live-buy-v").textContent = `~$${fmt(a.guaranteed_next_round)}`;
+  $("live-buy-sub").textContent = a.cost > 0
+    ? `spend $${fmt(a.cost)} now`
+    : `nothing to buy — same as saving`;
+  $("live-context").textContent =
+    `$${fmt(s.money)} in hand · ${s.team} · Round ${s.round}${s.phase ? ` (${s.phase})` : ""} · ${s.losses}-loss streak`;
+}
+setRole(role);
 setInterval(poll, 1000);
-poll();
+
+// --- debug: pin a preview of each buy category (via /api/preview, which never
+// touches live state). "Live" switches back to the real game. Scenarios are per
+// role because the thresholds differ — an AWPer needs a bigger bankroll. ---
+const SCENARIOS = {
+  rifle: {
+    "Full buy":   { money: 6500, losses: 0 },
+    "Half buy":   { money: 3200, losses: 0 },
+    "Eco / save": { money: 1500, losses: 4 },
+    "Force buy":  { money: 2200, losses: 0 },
+    "Full eco":   { money: 700,  losses: 0 },
+  },
+  awp: {
+    "Full buy":   { money: 6800, losses: 0 },
+    "Half buy":   { money: 3500, losses: 0 },
+    "Eco / save": { money: 2500, losses: 4 },
+    "Force buy":  { money: 2200, losses: 0 },
+    "Full eco":   { money: 700,  losses: 0 },
+  },
+};
+for (const m of ["live", ...Object.keys(SCENARIOS.rifle)]) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.dataset.mode = m;
+  b.textContent = m === "live" ? "Live" : m;
+  b.addEventListener("click", () => setMode(m));
+  $("debug").appendChild(b);
+}
+setMode("live");
 </script>
 </body>
 </html>
