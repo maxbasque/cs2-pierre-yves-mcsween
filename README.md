@@ -2,13 +2,17 @@
 
 A tiny Counter-Strike 2 economy adviser. *En as-tu vraiment besoin?*
 
-Enter your money / side / loss streak and it tells you: **Full buy**, **Half buy**,
-**Eco / save**, **Force buy**, or **Full eco** — with the reasoning and your
-projected money next round if you save.
+It reads live data straight from the game via **Game State Integration (GSI)**, an
+official Valve feature, and tells you: **Full buy**, **Half buy**, **Eco / save**,
+**Force buy**, or **Full eco** — with an itemised loadout, how much you're
+guaranteed next round if you follow it, and how much if you save instead.
 
-Optionally it reads live data straight from the game via **Game State Integration
-(GSI)**, an official Valve feature. GSI is read-only: the game POSTs JSON to this
-local server. No injection, no memory reading, **no VAC risk**.
+A **Rifler / AWPer** toggle switches the economy model: the AWPer path targets a
+higher full-buy number (~$6,250 T / ~$6,650 CT), recommends a rifle on rounds it
+can't kit the AWP, and saves toward the pick. The choice sticks across rounds.
+
+GSI is read-only: the game POSTs JSON to this local server. No injection, no memory
+reading, **no VAC risk**.
 
 Pure Go standard library, no OS-specific code — runs on **Linux, Windows, and
 macOS** the same way. You need [Go](https://go.dev/dl/) 1.21+ installed.
@@ -22,13 +26,14 @@ go run .
 If your shell reports `go: command not found`, add Go's install location to your
 `PATH` first (for a Homebrew install that's `export PATH="$(brew --prefix)/bin:$PATH"`).
 
-Open <http://127.0.0.1:16000> (port 16000 = CS2 max money). The manual calculator
-works immediately. Override with `-addr 127.0.0.1:PORT`.
+Open <http://127.0.0.1:16000> (port 16000 = CS2 max money). Override with
+`-addr 127.0.0.1:PORT`. The "Live" panel stays in its waiting state until CS2 is
+feeding it (see below).
 
 To build a standalone binary instead: `go build -o pym .` (or `go build -o pym.exe .`
 on Windows), then run `./pym`.
 
-## Live game data (optional)
+## Live game data
 
 Copy `gamestate_integration_pym.cfg` into your CS2 `cfg` folder, then launch CS2.
 The folder is under your Steam library:
@@ -53,8 +58,9 @@ different port or host, edit the `uri` line to match. Keep it on `127.0.0.1`
 ## Known simplifications (v0)
 
 - Kill rewards assume $300 (rifle/pistol/SMG). AWP is $100, knife $1500, shotgun $900.
-- Buy thresholds are fixed "kitted rifle" targets (~$4700 T / ~$5000 CT), not
-  situational (enemy buy, man advantage, bomb down, time on clock).
+- Buy thresholds are fixed targets (rifler ~$4700 T / ~$5000 CT, AWPer ~$6250 /
+  ~$6650), not situational (enemy buy, man advantage, bomb down, time on clock).
+- "Guaranteed next round" is the worst case: you lose with no kills and no plant.
 - No teammate economy — advice is for you, not the team.
 
 ## Economy rules encoded
