@@ -5,12 +5,15 @@
 // and renders the advice. The two never talk directly; this server is a mailbox
 // keyed by a random per-person token, holding only the latest payload for 5 min.
 //
+// No database: state is kept in memory. Deno Deploy may run several isolates, so
+// writes are fanned out over a BroadcastChannel and each isolate keeps its own
+// copy. Deploy needs no config beyond the entrypoint.
+//
 // Run locally:   deno task dev
-// Deploy:        see deno/README.md (Deno Deploy, free tier)
+// Deploy:        see deno/README.md
 
 import { type Advice, recommend } from "./economy.ts";
 
-const kv = await Deno.openKv();
 const TTL_MS = 5 * 60 * 1000;
 
 const HTML = await Deno.readTextFile(
@@ -70,6 +73,34 @@ function num(v: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+// --- in-memory state, one entry per token ---
+interface Stored {
+  state: State;
+  ts: number;
+}
+const store = new Map<string, Stored>();
+const channel = new BroadcastChannel("pym");
+channel.onmessage = (e: MessageEvent<{ token: string; stored: Stored }>) => {
+  store.set(e.data.token, e.data.stored);
+};
+
+function putState(token: string, state: State): void {
+  const stored: Stored = { state, ts: Date.now() };
+  store.set(token, stored);
+  channel.postMessage({ token, stored }); // fan out to other isolates
+}
+function getState(token: string): State {
+  const hit = store.get(token);
+  if (!hit || Date.now() - hit.ts > TTL_MS) return EMPTY_STATE;
+  return hit.state;
+}
+
+// Drop abandoned tokens now and then so the Map can't grow forever.
+setInterval(() => {
+  const cutoff = Date.now() - TTL_MS;
+  for (const [k, v] of store) if (v.ts < cutoff) store.delete(k);
+}, 60_000);
+
 async function handler(req: Request): Promise<Response> {
   const url = new URL(req.url);
   const path = url.pathname;
@@ -81,7 +112,7 @@ async function handler(req: Request): Promise<Response> {
     });
   }
 
-  // Mint a fresh token (no storage — the KV entry is created on the first POST).
+  // Mint a fresh token (nothing is stored until the first POST).
   if (req.method === "GET" && path === "/new") {
     return json({ token: crypto.randomUUID().replaceAll("-", "") });
   }
@@ -118,7 +149,7 @@ async function handler(req: Request): Promise<Response> {
         round: num(p.map.round),
         phase: String(p.map.phase ?? ""),
       };
-      await kv.set(["state", token], state, { expireIn: TTL_MS });
+      putState(token, state);
     }
     return new Response("ok");
   }
@@ -131,8 +162,7 @@ async function handler(req: Request): Promise<Response> {
       return json({ ...EMPTY_STATE, advice: EMPTY_ADVICE });
     }
     const role = url.searchParams.get("role") ?? "";
-    const rec = await kv.get<State>(["state", token]);
-    const s = rec.value ?? EMPTY_STATE;
+    const s = getState(token);
     const advice = s.have && s.team
       ? recommend(s.money, s.team, s.losses, role)
       : EMPTY_ADVICE;

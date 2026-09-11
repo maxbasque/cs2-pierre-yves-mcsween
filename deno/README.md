@@ -11,13 +11,15 @@ drop one `.cfg` into CS2.
 | ---------------------- | --------------------- | ------------------------------------ |
 | `POST /i/<token>`      | CS2 (GSI, over HTTPS) | stores your latest state             |
 | `GET /s/<token>?role=` | the page, every 2 s   | returns state + buy advice           |
+| `GET /preview?…`       | the debug buttons     | advice for made-up inputs, stateless |
 | `GET /new`             | the page              | mints a fresh random token           |
 | `GET /`                | the browser           | the page itself                      |
 | `GET /assets/*.png`    | the page              | mannequin images (from `../assets/`) |
 
-State lives in Deno KV for 5 minutes per token, then expires. Nothing is logged.
-CS2 and the browser never talk to each other — this is just a mailbox keyed by a
-per-person token.
+No database — the latest payload per token is held in memory for 5 minutes. Deno
+Deploy may run several isolates, so writes are fanned out to the others over a
+`BroadcastChannel`. CS2 and the browser never talk to each other — this is just
+a mailbox keyed by a per-person token. Nothing is logged.
 
 ## Run locally
 
@@ -34,21 +36,19 @@ curl -s -X POST "localhost:8000/i/$TOK" -H 'content-type: application/json' \
 curl -s "localhost:8000/s/$TOK?role=rifle"
 ```
 
-## Deploy (free)
+## Deploy (free, no database to set up)
 
 1. Push this branch to GitHub.
-2. <https://dash.deno.com> → **New Project** → **Deploy from GitHub repo**. If
-   you land on the newer dashboard, pick **Deploy Classic** — this uses Deno KV,
-   which is a Classic feature.
-3. Select the repo, then:
-   - **Branch:** `deno-hosted-relay` (or `main` once merged)
+2. <https://app.deno.com> → your org → **New app** → connect the GitHub repo.
+3. In the app config:
    - **Entrypoint:** `deno/main.ts`
-   - Build command / install step: leave empty
-4. Deploy. You get `https://<name>.deno.dev`; KV is provisioned automatically.
-   Every `git push` redeploys.
+   - **Branch:** `deno-hosted-relay` (or `main` once merged)
+   - Build / install command: leave empty
+   - No env vars, no database — the app stores state in memory.
+4. Deploy. You get `https://<name>.deno.dev`. Every `git push` redeploys.
 
-Free tier: 1M requests/month, 100 GB bandwidth — far more than a few friends
-(with `throttle "1.0"` in the cfg, ≈1,000 requests per person per match).
+Free tier is far more than a few friends need (with `throttle "1.0"` in the cfg,
+≈1,000 requests per person per match).
 
 ## Onboard a friend
 
